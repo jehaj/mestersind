@@ -5,6 +5,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 #[derive(PartialEq)]
+#[derive(Debug)]
 enum Color {
     Red,
     Brown,
@@ -115,7 +116,7 @@ fn main() {
 
     let n = 12;
     let mut attempts = 0;
-    let mut guesses: Vec<Vec<Color>> = vec!(vec!());
+    let mut guesses: Vec<Vec<Color>> = vec!();
     print_rows_of_dots(attempts, n);
     println!("You guess by writing:");
     println!("The colors are: Red, Brown, Yellow, Green, Black, White, Orange, Blue, None");
@@ -123,6 +124,11 @@ fn main() {
     println!("for Red, Brown, Yellow, Green and Black would look like:");
     println!(">Red Brown Yellow Green Black");
     while attempts < n {
+        if attempts > 0 {
+            clear_terminal();
+            print_guesses(&guesses);
+            print_rows_of_dots(attempts, n);
+        }
         println!();
         println!("You have {} tries remaining. Try and guess.", n - attempts);
         print!(">");
@@ -135,19 +141,36 @@ fn main() {
             continue;
         }
         let guess: Vec<Color> = get_colors(&input);
-        println!("You guessed: ");
-        for color in &guess {
-            print_circle(color);
-        }
+        print!("You guessed: ");
+        print_guess(&guess);
         let code = vec!(Color::Red);
+        attempts += 1;
         if is_correct(&guess, &code) {
-            println!(", which is correct! Congratulations!");
+            println!(", which is correct! Congratulations! It took {attempts} attempt{}.", pluralize(&attempts));
             break;
         } else {
             println!(". Unfortunately that is not correct.");
         }
         press_to_continue();
         guesses.push(guess);
-        attempts += 1;
     }
+}
+
+fn print_guess(guess: &Vec<Color>) {
+    for color in guess {
+        print_circle(color);
+    }
+}
+
+fn print_guesses(guesses: &Vec<Vec<Color>>) {
+    for (i, guess) in guesses.iter().enumerate() {
+        let row = i + 1;
+        print!("{row:2}: ");
+        print_guess(guess);
+        println!();
+    }
+}
+
+fn pluralize(attempts: &isize) -> &str {
+    if *attempts == 1 { "" } else { "s" }
 }
