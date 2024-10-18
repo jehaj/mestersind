@@ -78,6 +78,33 @@ fn clear_terminal() {
     child.wait().unwrap();
 }
 
+/// checks if the guess and code are the same.
+fn is_correct(guess: &Vec<Color>, code: &Vec<Color>) -> bool {
+    let zip = zip(guess, code);
+    zip.fold(true, |acc, (guess, code)| { guess == code && acc })
+}
+
+/// Asks the user to press enter. Uses [std::io::stdio::read_line] to block and wait for the user.
+fn press_to_continue() {
+    println!("Press enter to continue...");
+    let stdin = std::io::stdin();
+    let mut input = String::new();
+    stdin.read_line(&mut input).unwrap();
+}
+
+/// Given a string of colors, get the vector of [Color] colors.
+/// Requires the string to contain valid colors seperated by whitespace.
+/// Uses [string_to_color] to map the string to a [Color] color.
+fn get_colors(input: &String) -> Vec<Color> {
+    input.split_whitespace().map(string_to_color).collect()
+}
+
+/// If guess contains five valid colors (see [Color]) seperated by spaces then it will return true,
+/// otherwise false.
+fn validate_guess(guess: &String) -> bool {
+    true
+}
+
 fn main() {
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
@@ -123,31 +150,4 @@ fn main() {
         guesses.push(guess);
         attempts += 1;
     }
-}
-
-/// checks if the guess and code are the same.
-fn is_correct(guess: &Vec<Color>, code: &Vec<Color>) -> bool {
-    let zip = zip(guess, code);
-    zip.fold(true, |acc, (guess, code)| { guess == code && acc })
-}
-
-/// Asks the user to press enter. Uses [std::io::stdio::read_line] to block and wait for the user.
-fn press_to_continue() {
-    println!("Press enter to continue...");
-    let stdin = std::io::stdin();
-    let mut input = String::new();
-    stdin.read_line(&mut input).unwrap();
-}
-
-/// Given a string of colors, get the vector of [Color] colors.
-/// Requires the string to contain valid colors seperated by whitespace.
-/// Uses [string_to_color] to map the string to a [Color] color.
-fn get_colors(input: &String) -> Vec<Color> {
-    input.split_whitespace().map(string_to_color).collect()
-}
-
-/// If guess contains five valid colors (see [Color]) seperated by spaces then it will return true,
-/// otherwise false.
-fn validate_guess(guess: &String) -> bool {
-    true
 }
