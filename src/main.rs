@@ -4,17 +4,41 @@ use std::thread::sleep;
 use std::time::Duration;
 
 enum Color {
-    Red, Brown, Yellow, Green, Black, White, Orange, Blue, None
+    Red,
+    Brown,
+    Yellow,
+    Green,
+    Black,
+    White,
+    Orange,
+    Blue,
+    None,
 }
 
-fn print_rows_of_dots(n: isize) {
-    for i in 0..n {
-        let row = i+1;
+fn print_rows_of_dots(attempts: isize, n: isize) {
+    for i in attempts..n {
+        let row = i + 1;
         println!("{row:2}: {}", "･".repeat(5));
     }
 }
 
-fn print_circle(color: Color) {
+/// Given a string, get the color. Requires the string to be a valid color.
+fn string_to_color(input: &str) -> Color {
+    match input.to_lowercase().as_str() {
+        "red" => Color::Red,
+        "brown" => Color::Brown,
+        "yellow" => Color::Yellow,
+        "green" => Color::Green,
+        "black" => Color::Black,
+        "white" => Color::White,
+        "orange" => Color::Orange,
+        "blue" => Color::Blue,
+        "none" => Color::None,
+        _ => panic!("Invalid color input") // precondition not fulfilled
+    }
+}
+
+fn print_circle(color: &Color) {
     let color = match color {
         Color::Green => "32",
         Color::Red => "31",
@@ -52,8 +76,6 @@ fn clear_terminal() {
     child.wait().unwrap();
 }
 
-
-
 fn main() {
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
@@ -63,8 +85,9 @@ fn main() {
     clear_terminal();
 
     let n = 12;
-    print_rows_of_dots(n);
     let mut attempts = 0;
+    let mut guesses: Vec<Vec<Color>> = vec!(vec!());
+    print_rows_of_dots(attempts, n);
     println!("You guess by writing:");
     println!("The colors are: Red, Brown, Yellow, Green, Black, White, Orange, Blue, None");
     println!("You guess by writing the colors you want to guess seperated by spaces. A guess");
@@ -79,9 +102,20 @@ fn main() {
         stdin.read_line(&mut input).unwrap();
         let input = input.trim().to_lowercase();
         if !validate_guess(&input) {
+            println!("Sorry, your guess was not valid. Please try again.");
             continue;
         }
+        let guess: Vec<Color> = get_colors(&input);
+        for color in &guess {
+            print_circle(color);
+        }
+        guesses.push(guess);
+        attempts += 1;
     }
+}
+
+fn get_colors(input: &String) -> Vec<Color> {
+    input.split_whitespace().map(string_to_color).collect()
 }
 
 /// If guess contains five valid colors (see Color) seperated by spaces then it will return true,
