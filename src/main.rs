@@ -182,6 +182,11 @@ fn main() {
         press_to_continue();
         history.push((guess, hints));
     }
+    if attempts == n {
+        print!("You unfortunately lost. The code was "); print_guess(&code);
+        println!(".");
+        println!("Better luck next time!");
+    }
 }
 
 fn get_code() -> Vec<Color> {
