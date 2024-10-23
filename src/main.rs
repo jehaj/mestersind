@@ -6,6 +6,8 @@ use std::time::Duration;
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+/// Describes the colors that our Master mind game supports.
+/// You can use Red, Brown, Yellow, Green, Black, White, Orange, Blue or None.
 enum Color {
     Red,
     Brown,
@@ -18,6 +20,15 @@ enum Color {
     None,
 }
 
+/// Used when determining which part of the guess has same color and place, same color but wrong
+/// position or just plain wrong.
+enum CorrectlyPlacedCorrectColorButWrongWrong {
+    CorrectlyPlaced,
+    CorrectColorButWrong,
+    Wrong
+}
+
+/// Print the remaining tries. Goes from attempts to n (excluded).
 fn print_rows_of_dots(attempts: isize, n: isize) {
     for i in attempts..n {
         let row = i + 1;
@@ -25,7 +36,7 @@ fn print_rows_of_dots(attempts: isize, n: isize) {
     }
 }
 
-/// Given a string, get the color. Requires the string to be a valid color.
+/// Given a string *input*, get the color. Requires the string to be a valid color. See [Color].
 fn string_to_color(input: &str) -> Color {
     match input.to_lowercase().as_str() {
         "red" => Color::Red,
@@ -41,6 +52,7 @@ fn string_to_color(input: &str) -> Color {
     }
 }
 
+/// Print a circle with the given color ([Color]).
 fn print_circle(color: &Color) {
     let color = match color {
         Color::Green => "32",
@@ -62,6 +74,7 @@ fn print_circle(color: &Color) {
     print!("\x1b[0m") // Reset color back to normal
 }
 
+/// Clears the terminal by calling OS programs. *cls* for windows and *clear* for unix.
 fn clear_terminal() {
     let family = env::consts::FAMILY;
     let program = match family {
@@ -81,6 +94,7 @@ fn clear_terminal() {
 
 /// checks if the guess and code are the same.
 fn is_correct(guess: &Vec<Color>, code: &Vec<Color>) -> bool {
+    if guess.len() != code.len() { return false; }
     let zip = zip(guess, code);
     zip.fold(true, |acc, (guess, code)| { guess == code && acc })
 }
@@ -103,7 +117,12 @@ fn get_colors(input: &String) -> Vec<Color> {
 /// If guess contains five valid colors (see [Color]) seperated by spaces then it will return true,
 /// otherwise false.
 fn validate_guess(guess: &String) -> bool {
-    true
+    const COLOR_SET: [&str; 9] = ["red", "brown", "yellow", "green", "black", "white", "orange", "blue", "none"];
+    let colors = guess.split(" ");
+    let colors = colors.collect::<Vec<&str>>();
+    let size = colors.len();
+    if size != 5 { return false; }
+    colors.into_iter().fold(true, |acc, color| COLOR_SET.contains(&color) && acc)
 }
 
 fn main() {
