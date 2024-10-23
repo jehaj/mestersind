@@ -3,9 +3,9 @@ use std::io::Write;
 use std::iter::zip;
 use std::thread::sleep;
 use std::time::Duration;
+use rand::seq::IndexedRandom;
 
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 /// Describes the colors that our Master mind game supports.
 /// You can use Red, Brown, Yellow, Green, Black, White, Orange, Blue or None.
 enum Color {
@@ -20,12 +20,12 @@ enum Color {
     None,
 }
 
+#[derive(PartialEq, Ord, Eq, PartialOrd)]
 /// Used when determining which part of the guess has same color and place, same color but wrong
 /// position or just plain wrong.
-enum CorrectlyPlacedCorrectColorButWrongWrong {
+enum Hint {
     CorrectlyPlaced,
     CorrectColorButWrong,
-    Wrong
 }
 
 /// Print the remaining tries. Goes from attempts to n (excluded).
@@ -114,15 +114,19 @@ fn get_colors(input: &String) -> Vec<Color> {
     input.split_whitespace().map(string_to_color).collect()
 }
 
+
+
 /// If guess contains five valid colors (see [Color]) seperated by spaces then it will return true,
 /// otherwise false.
 fn validate_guess(guess: &String) -> bool {
-    const COLOR_SET: [&str; 9] = ["red", "brown", "yellow", "green", "black", "white", "orange", "blue", "none"];
+    const COLOR_SET: [&str; 9] = ["red", "brown", "yellow", "green", "black", "white", "orange",
+                                  "blue", "none"];
     let colors = guess.split(" ");
     let colors = colors.collect::<Vec<&str>>();
     let size = colors.len();
     if size != 5 { return false; }
-    colors.into_iter().fold(true, |acc, color| COLOR_SET.contains(&color) && acc)
+    colors.into_iter().fold(true,
+                            |acc, color| COLOR_SET.contains(&color) && acc)
 }
 
 fn main() {
@@ -133,24 +137,29 @@ fn main() {
     sleep(Duration::new(0, 750_000_000));
     clear_terminal();
 
+    let code = get_code();
+    println!("I have found my code. It is your job to guess it!");
+    // print_guess(&code); println!();
+
     let n = 12;
     let mut attempts = 0;
-    let mut guesses: Vec<Vec<Color>> = vec!();
+    let mut history: Vec<(Vec<Color>, Vec<Hint>)> = vec!();
     print_rows_of_dots(attempts, n);
-    println!("You guess by writing:");
     println!("The colors are: Red, Brown, Yellow, Green, Black, White, Orange, Blue, None");
     println!("You guess by writing the colors you want to guess seperated by spaces. A guess");
     println!("for Red, Brown, Yellow, Green and Black would look like:");
-    println!(">Red Brown Yellow Green Black");
+    println!("> Red Brown Yellow Green Black");
+    println!("You will get hints: a '+' if you guessed a color correctly in the right place,");
+    println!("or a '-' if you guessed a color, but it is in the wrong place.");
     while attempts < n {
         if attempts > 0 {
             clear_terminal();
-            print_guesses(&guesses);
+            print_history(&history);
             print_rows_of_dots(attempts, n);
         }
         println!();
         println!("You have {} tries remaining. Try and guess.", n - attempts);
-        print!(">");
+        print!("> ");
         stdout.flush().unwrap();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
@@ -162,17 +171,58 @@ fn main() {
         let guess: Vec<Color> = get_colors(&input);
         print!("You guessed: ");
         print_guess(&guess);
-        let code = vec!(Color::Red);
         attempts += 1;
         if is_correct(&guess, &code) {
-            println!(", which is correct! Congratulations! It took {attempts} attempt{}.", pluralize(&attempts));
+            println!(", which is correct! Congratulations! It took {attempts} attempt{}.",
+                     pluralize(&attempts));
             break;
-        } else {
-            println!(". Unfortunately that is not correct.");
         }
+        println!(". Unfortunately that is not correct.");
+        let hints: Vec<Hint> = get_hints(&guess, &code);
         press_to_continue();
-        guesses.push(guess);
+        history.push((guess, hints));
     }
+}
+
+fn get_code() -> Vec<Color> {
+    let color_choices = [
+        Color::Red, Color::Brown, Color::Yellow, Color::Green, Color::Black, Color::White,
+        Color::Orange, Color::Blue, Color::None];
+    let mut colors = vec!();
+    let mut rng = rand::thread_rng();
+    for _ in 0..5 {
+        let &color = color_choices.choose(&mut rng).unwrap();
+        colors.push(color);
+    }
+    colors
+    // vec!(Color::Red, Color::Black, Color::None, Color::Red, Color::Green)
+}
+
+// Get hints based on guess and the correct code.
+fn get_hints(guess: &Vec<Color>, code: &Vec<Color>) -> Vec<Hint> {
+    let mut hints = vec!();
+    let mut used = [false; 5];
+    // CorrectColorButWrong can shadow CorrectlyPlaced, therefore
+    // we must first find all the CorrectlyPlaced before looking at
+    // CorrectColorButWrong.
+    for (i, color) in guess.iter().enumerate() {
+        if *color == code[i] {
+            hints.push(Hint::CorrectlyPlaced);
+            used[i] = true;
+        }
+    }
+    for (i, color) in guess.iter().enumerate() {
+        if *color == code[i] { continue }
+        zip(code, used)
+            .enumerate()
+            .filter(|(_, (code, used))| color == *code && !used)
+            .next().map(|(i, (_, _))| {
+                used[i] = true;
+                hints.push(Hint::CorrectColorButWrong)
+            });
+    }
+    hints.sort();
+    hints
 }
 
 fn print_guess(guess: &Vec<Color>) {
@@ -181,12 +231,23 @@ fn print_guess(guess: &Vec<Color>) {
     }
 }
 
-fn print_guesses(guesses: &Vec<Vec<Color>>) {
-    for (i, guess) in guesses.iter().enumerate() {
+fn print_history(guesses: &Vec<(Vec<Color>, Vec<Hint>)>) {
+    for (i, (guess, hints)) in guesses.iter().enumerate() {
         let row = i + 1;
         print!("{row:2}: ");
         print_guess(guess);
+        print!(" ");
+        print_hints(hints);
         println!();
+    }
+}
+
+fn print_hints(hints: &Vec<Hint>) {
+    for hint in hints {
+        print!("{}", match hint {
+            Hint::CorrectlyPlaced => "+",
+            Hint::CorrectColorButWrong => "-",
+        });
     }
 }
 
