@@ -1,9 +1,9 @@
+use rand::seq::IndexedRandom;
 use std::env;
 use std::io::Write;
 use std::iter::zip;
 use std::thread::sleep;
 use std::time::Duration;
-use rand::seq::IndexedRandom;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 /// Describes the colors that our Master mind game supports.
@@ -48,7 +48,7 @@ fn string_to_color(input: &str) -> Color {
         "orange" => Color::Orange,
         "blue" => Color::Blue,
         "none" => Color::None,
-        _ => panic!("Invalid color input") // precondition not fulfilled
+        _ => panic!("Invalid color input"), // precondition not fulfilled
     }
 }
 
@@ -80,13 +80,13 @@ fn clear_terminal() {
     let program = match family {
         "windows" => "cmd",
         "unix" => "sh",
-        f => panic!("Does not support that family: {f}.")
+        f => panic!("Does not support that family: {f}."),
     };
     let mut command = std::process::Command::new(program);
     match family {
-        "windows" => command.args(&["/C", "cls"]),
+        "windows" => command.args(["/C", "cls"]),
         "unix" => command.arg("clear"),
-        _ => panic!("Unknown family: {family}")
+        _ => panic!("Unknown family: {family}"),
     };
     let mut child = command.spawn().unwrap();
     child.wait().unwrap();
@@ -94,9 +94,11 @@ fn clear_terminal() {
 
 /// checks if the guess and code are the same.
 fn is_correct(guess: &Vec<Color>, code: &Vec<Color>) -> bool {
-    if guess.len() != code.len() { return false; }
+    if guess.len() != code.len() {
+        return false;
+    }
     let zip = zip(guess, code);
-    zip.fold(true, |acc, (guess, code)| { guess == code && acc })
+    zip.fold(true, |acc, (guess, code)| guess == code && acc)
 }
 
 /// Asks the user to press enter. Uses [std::io::stdio::read_line] to block and wait for the user.
@@ -110,23 +112,25 @@ fn press_to_continue() {
 /// Given a string of colors, get the vector of [Color] colors.
 /// Requires the string to contain valid colors seperated by whitespace.
 /// Uses [string_to_color] to map the string to a [Color] color.
-fn get_colors(input: &String) -> Vec<Color> {
+fn get_colors(input: &str) -> Vec<Color> {
     input.split_whitespace().map(string_to_color).collect()
 }
 
-
-
 /// If guess contains five valid colors (see [Color]) seperated by spaces then it will return true,
 /// otherwise false.
-fn validate_guess(guess: &String) -> bool {
-    const COLOR_SET: [&str; 9] = ["red", "brown", "yellow", "green", "black", "white", "orange",
-                                  "blue", "none"];
+fn validate_guess(guess: &str) -> bool {
+    const COLOR_SET: [&str; 9] = [
+        "red", "brown", "yellow", "green", "black", "white", "orange", "blue", "none",
+    ];
     let colors = guess.split(" ");
     let colors = colors.collect::<Vec<&str>>();
     let size = colors.len();
-    if size != 5 { return false; }
-    colors.into_iter().fold(true,
-                            |acc, color| COLOR_SET.contains(&color) && acc)
+    if size != 5 {
+        return false;
+    }
+    colors
+        .into_iter()
+        .fold(true, |acc, color| COLOR_SET.contains(&color) && acc)
 }
 
 fn main() {
@@ -139,11 +143,12 @@ fn main() {
 
     let code = get_code();
     println!("I have found my code. It is your job to guess it!");
-    // print_guess(&code); println!();
+    print_guess(&code);
+    println!();
 
     let n = 12;
     let mut attempts = 0;
-    let mut history: Vec<(Vec<Color>, Vec<Hint>)> = vec!();
+    let mut history: Vec<(Vec<Color>, Vec<Hint>)> = vec![];
     print_rows_of_dots(attempts, n);
     println!("The colors are: Red, Brown, Yellow, Green, Black, White, Orange, Blue, None");
     println!("You guess by writing the colors you want to guess seperated by spaces. A guess");
@@ -173,8 +178,10 @@ fn main() {
         print_guess(&guess);
         attempts += 1;
         if is_correct(&guess, &code) {
-            println!(", which is correct! Congratulations! It took {attempts} attempt{}.",
-                     pluralize(&attempts));
+            println!(
+                ", which is correct! Congratulations! It took {attempts} attempt{}.",
+                pluralize(&attempts)
+            );
             break;
         }
         println!(". Unfortunately that is not correct.");
@@ -183,7 +190,8 @@ fn main() {
         history.push((guess, hints));
     }
     if attempts == n {
-        print!("You unfortunately lost. The code was "); print_guess(&code);
+        print!("You unfortunately lost. The code was ");
+        print_guess(&code);
         println!(".");
         println!("Better luck next time!");
     }
@@ -191,9 +199,17 @@ fn main() {
 
 fn get_code() -> Vec<Color> {
     let color_choices = [
-        Color::Red, Color::Brown, Color::Yellow, Color::Green, Color::Black, Color::White,
-        Color::Orange, Color::Blue, Color::None];
-    let mut colors = vec!();
+        Color::Red,
+        Color::Brown,
+        Color::Yellow,
+        Color::Green,
+        Color::Black,
+        Color::White,
+        Color::Orange,
+        Color::Blue,
+        Color::None,
+    ];
+    let mut colors = vec![];
     let mut rng = rand::thread_rng();
     for _ in 0..5 {
         let &color = color_choices.choose(&mut rng).unwrap();
@@ -204,8 +220,8 @@ fn get_code() -> Vec<Color> {
 }
 
 // Get hints based on guess and the correct code.
-fn get_hints(guess: &Vec<Color>, code: &Vec<Color>) -> Vec<Hint> {
-    let mut hints = vec!();
+fn get_hints(guess: &[Color], code: &Vec<Color>) -> Vec<Hint> {
+    let mut hints = vec![];
     let mut used = [false; 5];
     // CorrectColorButWrong can shadow CorrectlyPlaced, therefore
     // we must first find all the CorrectlyPlaced before looking at
@@ -217,14 +233,16 @@ fn get_hints(guess: &Vec<Color>, code: &Vec<Color>) -> Vec<Hint> {
         }
     }
     for (i, color) in guess.iter().enumerate() {
-        if *color == code[i] { continue }
-        zip(code, used)
+        if *color == code[i] {
+            continue;
+        }
+        let wrong_placement = zip(code, used)
             .enumerate()
-            .filter(|(_, (code, used))| color == *code && !used)
-            .next().map(|(i, (_, _))| {
-                used[i] = true;
-                hints.push(Hint::CorrectColorButWrong)
-            });
+            .find(|(_, (code, used))| color == *code && !used);
+        if let Some((i, (_, _))) = wrong_placement {
+            used[i] = true;
+            hints.push(Hint::CorrectColorButWrong)
+        }
     }
     hints.sort();
     hints
@@ -236,7 +254,7 @@ fn print_guess(guess: &Vec<Color>) {
     }
 }
 
-fn print_history(guesses: &Vec<(Vec<Color>, Vec<Hint>)>) {
+fn print_history(guesses: &[(Vec<Color>, Vec<Hint>)]) {
     for (i, (guess, hints)) in guesses.iter().enumerate() {
         let row = i + 1;
         print!("{row:2}: ");
@@ -249,13 +267,20 @@ fn print_history(guesses: &Vec<(Vec<Color>, Vec<Hint>)>) {
 
 fn print_hints(hints: &Vec<Hint>) {
     for hint in hints {
-        print!("{}", match hint {
-            Hint::CorrectlyPlaced => "+",
-            Hint::CorrectColorButWrong => "-",
-        });
+        print!(
+            "{}",
+            match hint {
+                Hint::CorrectlyPlaced => "+",
+                Hint::CorrectColorButWrong => "-",
+            }
+        );
     }
 }
 
 fn pluralize(attempts: &isize) -> &str {
-    if *attempts == 1 { "" } else { "s" }
+    if *attempts == 1 {
+        ""
+    } else {
+        "s"
+    }
 }
